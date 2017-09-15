@@ -59,19 +59,11 @@ distinctMap code = null ([(x,y) | (x,y)<-code, x==y])
 
 -- checks if a Code is its own inverse
 ownInverse :: Code -> Bool
-ownInverse code 
--- Question 7 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = True
+ownInverse code = [(x,y) | (x,y)<-code] == [(y,x) | (x,y)<-code]
 
 -- checks if everything in first String is contained in second String
 subset :: String -> String -> Bool 
-subset s1 s2 
--- Question 8 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = True
+subset s1 s2 = length [c | c<-s1, c `elem` s2] == length s2
 
 -- checks if every letter is the first element of a pair in Code
 allMapped :: Code -> Bool
