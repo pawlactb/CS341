@@ -71,9 +71,5 @@ allMapped code = length code == 26 && numInvalid code == 0
 
 -- checks if everything in Code maps to a letter
 mapLetters :: Code -> Bool
-mapLetters code 
--- Question 10 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = True
+mapLetters code = length [y | (x,y)<-code, y `elem` ['a'..'z']] == length code
 
