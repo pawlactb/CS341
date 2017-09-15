@@ -27,22 +27,17 @@ code2 = makeCode domain2 range2
 
 -- pairFirst takes a Code and Char
 -- returns the list of all Pairs with that Char as first element
-pairFirst :: Code -> Char -> Code
-pairFirst code ch 
--- Question 1 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = code
+pairFirst :: [Code] -> Char -> [Code]
+pairFirst code ch = [(x,y) | (x,y)<-code, x==ch]
+
 
 -- uses a code to encrypt a Char
 -- if no mapping then the Char encrypts as itself
 -- if more than one mapping just use the first value
-encryptChar :: Code -> Char -> Char 
-encryptChar code ch
--- Question 2 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = ch
+encryptChar :: [Code] -> Char -> Char 
+encryptChar code ch = if null (pairFirst code ch)
+						then ch
+					else snd pairFirst (code ch) 
 
 -- uses a Code to encrypt a String
 encryptString :: Code -> String -> String
