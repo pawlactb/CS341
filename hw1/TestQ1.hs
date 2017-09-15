@@ -1,5 +1,9 @@
 --Due Date: 2017-09-19 23:59:59.999999
 
+--
+--Created by Tyler Pawlaczyk. Worked with Patrick Delaney.
+--
+
 module TestQ1 (TestQ1.pairFirst,TestQ1.encryptChar,TestQ1.encryptString,TestQ1.howManyValues,TestQ1.numInvalid,TestQ1.distinctMap,TestQ1.ownInverse,TestQ1.subset,TestQ1.allMapped,TestQ1.mapLetters) where
 
 -- Code is a type synonym
@@ -72,4 +76,3 @@ allMapped code = length code == 26 && numInvalid code == 0
 -- checks if everything in Code maps to a letter
 mapLetters :: Code -> Bool
 mapLetters code = length [y | (x,y)<-code, y `elem` ['a'..'z']] == length code
-
