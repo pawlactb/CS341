@@ -50,11 +50,8 @@ howManyValues code ch = length (pairFirst code ch)
 
 -- takes a Code and returns the number of Chars mapped to more than one element
 numInvalid :: Code -> Int
-numInvalid code 
--- Question 5 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = 0
+numInvalid code = length [x | (x,y) <- code, howManyValues code x > 1]
+
 
 -- takes a Code and returns True if no Char maps to itself
 distinctMap :: Code -> Bool
