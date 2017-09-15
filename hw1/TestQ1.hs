@@ -67,11 +67,7 @@ subset s1 s2 = length [c | c<-s1, c `elem` s2] == length s2
 
 -- checks if every letter is the first element of a pair in Code
 allMapped :: Code -> Bool
-allMapped code 
--- Question 9 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = True
+allMapped code = length code == 26 && numInvalid code == 0
 
 -- checks if everything in Code maps to a letter
 mapLetters :: Code -> Bool
