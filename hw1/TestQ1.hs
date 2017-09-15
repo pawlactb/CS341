@@ -27,33 +27,26 @@ code2 = makeCode domain2 range2
 
 -- pairFirst takes a Code and Char
 -- returns the list of all Pairs with that Char as first element
-pairFirst :: [Code] -> Char -> [Code]
+pairFirst :: Code -> Char -> Code
 pairFirst code ch = [(x,y) | (x,y)<-code, x==ch]
 
 
 -- uses a code to encrypt a Char
 -- if no mapping then the Char encrypts as itself
 -- if more than one mapping just use the first value
-encryptChar :: [Code] -> Char -> Char 
+encryptChar :: Code -> Char -> Char 
 encryptChar code ch = if null (pairFirst code ch)
 						then ch
-					else snd pairFirst (code ch) 
+						else snd (head (pairFirst code ch)) 
 
 -- uses a Code to encrypt a String
 encryptString :: Code -> String -> String
-encryptString code chars 
--- Question 3 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = chars
+encryptString code chars = [encryptChar code ch | ch<-chars]
 
 -- takes a Code and returns the number of elements a Char is mapped to in that Code
 howManyValues :: Code -> Char -> Int
-howManyValues code ch 
--- Question 4 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = 0
+howManyValues code ch = length (pairFirst code ch)
+
 
 -- takes a Code and returns the number of Chars mapped to more than one element
 numInvalid :: Code -> Int
