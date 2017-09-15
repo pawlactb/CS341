@@ -55,11 +55,7 @@ numInvalid code = length [x | (x,y) <- code, howManyValues code x > 1]
 
 -- takes a Code and returns True if no Char maps to itself
 distinctMap :: Code -> Bool
-distinctMap code 
--- Question 6 for homework  
--- I have given a definition here just so it type checks
--- You need to replace this with the proper definition
-  = True
+distinctMap code = null ([(x,y) | (x,y)<-code, x==y])
 
 -- checks if a Code is its own inverse
 ownInverse :: Code -> Bool
