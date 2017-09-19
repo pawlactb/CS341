@@ -54,7 +54,7 @@ howManyValues code ch = length (pairFirst code ch)
 
 -- takes a Code and returns the number of Chars mapped to more than one element
 numInvalid :: Code -> Int
-numInvalid code = = length  [ count | count <- [ howManyValues code ch | ch <- ['a'..'z'] ] , count > 1]
+numInvalid code = length  [ count | count <- [ howManyValues code ch | ch <- ['a'..'z'] ] , count > 1]
 
 
 -- takes a Code and returns True if no Char maps to itself
@@ -63,11 +63,13 @@ distinctMap code = null ([(x,y) | (x,y)<-code, x==y])
 
 -- checks if a Code is its own inverse
 ownInverse :: Code -> Bool
-ownInverse code = [(x,y) | (x,y)<-code] == [(y,x) | (x,y)<-code]
+ownInverse code 
+	| encryptString code (encryptString code (fst (unzip code))) == fst (unzip code) = True
+	| otherwise = False
 
 -- checks if everything in first String is contained in second String
 subset :: String -> String -> Bool 
-subset s1 s2 = length [c | c<-s1, c `elem` s2] == length s2
+subset s1 s2 = s1 == [ x | x <- s1, x `elem` s2 ]
 
 -- checks if every letter is the first element of a pair in Code
 allMapped :: Code -> Bool
