@@ -1,7 +1,7 @@
 --Due Date: 2017-09-19 23:59:59.999999
 
 --
---Created by Tyler Pawlaczyk. Worked with Patrick Delaney.
+--Created by Tyler Pawlaczyk. Worked with Patrick Delaney, and Anthony Dowling.
 --
 
 module TestQ1 (TestQ1.pairFirst,TestQ1.encryptChar,TestQ1.encryptString,TestQ1.howManyValues,TestQ1.numInvalid,TestQ1.distinctMap,TestQ1.ownInverse,TestQ1.subset,TestQ1.allMapped,TestQ1.mapLetters) where
@@ -54,7 +54,7 @@ howManyValues code ch = length (pairFirst code ch)
 
 -- takes a Code and returns the number of Chars mapped to more than one element
 numInvalid :: Code -> Int
-numInvalid code = length [x | (x,y) <- code, howManyValues code x > 1]
+numInvalid code = = length  [ count | count <- [ howManyValues code ch | ch <- ['a'..'z'] ] , count > 1]
 
 
 -- takes a Code and returns True if no Char maps to itself
