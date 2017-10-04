@@ -1,5 +1,6 @@
 --Due Date: 2017-09-28 23:59:59.999999
-
+--Worked with Patrick Delaney and Anthony Dowling --
+-- Author: Tyler Pawlaczyk --
 module TestQ2 (Number,addNum,subSum,Color,Node,Edge,Coloring,graphColor,Code,test_cycle,Inst,Variable,Statement,Program,Memory,test_exec) where
 
 import Debug.Trace
