@@ -31,10 +31,14 @@ addb [5,7] [9,8] 0
 
 -}
 addb :: Number -> Number -> Digit -> Number
-addb [] [] _ = [0, 0, _]
-addb xs ys c
-  = [0,0,1]
+addb [] [] 0 = [0]
+addb [] [] 1 = [1]
+addb [] y c = addb [0] y c
+addb x [] c = addb x [0] c
+addb (x:xs) (y:ys) c = (sum : (addb xs ys new_c))
+    where (sum, new_c) = ( ((x+y+c) `mod` 10), (quot (x+y) 10) )
 
+ 
 
 {-
 convertNumList takes a positive integer
@@ -46,10 +50,25 @@ convertNumList 75
 
 -}
 convertNumList :: Int -> Number
--- Fill in your code here
 convertNumList n
-  = [0,0,1]
-
+    | n < 0 = []
+    | otherwise = reverse (toString (show n))
+    where
+        toString str
+            | str == [] = []
+            | otherwise = charToInt (head str) : toString (tail str)
+            where
+                charToInt c
+                    | c == '9' = 9
+                    | c == '8' = 8
+                    | c == '7' = 7
+                    | c == '6' = 6
+                    | c == '5' = 5
+                    | c == '4' = 4
+                    | c == '3' = 3
+                    | c == '2' = 2
+                    | c == '1' = 1
+                    | c == '0' = 0
 
 {-
 addNum takes two integers
@@ -68,9 +87,7 @@ addNum m n = addb (convertNumList m) (convertNumList n) 0
 prop_add is a test to check addf using quickCheck
 -} 
 prop_add :: Int -> Int -> Bool 
--- I recommend that you fill in code here
-prop_add m n
-  = True
+prop_add m n = (addNum m n == addNum n m)
 
 
 {-
@@ -94,8 +111,11 @@ subSum [2,3,5,7] 11
 subSum :: [Int] -> Int -> [[Int]]
 -- Fill in your code here
 subSum xs n
-  = []
-
+  | xs == [] = [[]]
+  | otherwise =  [ x | x <- permutationsOf xs , sum x == n]
+  where 
+    permutationsOf (x:xs) = permutationsOf xs ++ [x:subArray | subArray <- (permutationsOf xs)]
+    permutationsOf [] = [[]]
 
 {-
 Property to partially check subSum using quickCheck
@@ -103,8 +123,12 @@ Property to partially check subSum using quickCheck
 prop_subsum :: [Int] -> Int -> Bool
 -- I recommend you fill in your code here
 prop_subsum xs n
-  = True
-  
+  | xs == [] = True
+  | (sum xs) < n = True
+  | subs == [] = True
+  | otherwise = sum (head (subs)) == n
+  where
+    subs = subSum xs n
 
 {-
 Types used in graph coloring
@@ -137,8 +161,25 @@ take 1 (graphColor "abc" [1..4] e2 [])
 graphColor :: [Color] -> [Node] -> [Edge] -> Coloring -> [Coloring]
 -- Fill in your code here
 graphColor colors nodes pairs solution
-  = []
-
+  = [ r | r <- [ [(y,z) | (y,z) <- x, z /= '\b' ] | x <- rawList ], length r == length nodes ]  -- sorts out invalid solutions
+  where 
+  rawList
+    | length nodes == length solution = [solution]  -- operation done, return the solution
+    | otherwise = concat [graphColor colors nodes pairs ((newColored, (colorify newColored colors pairs solution)):solution) |
+                          newColored <- nodes,
+                          notElem newColored (fst (unzip solution))
+                          ]
+    where
+    colorify node colors pairs solution
+      | solution == [] = head colors  -- makes the first node get colored faster
+      | validColors == [] = '\b'      -- no valid color could be found
+      | otherwise = head validColors  -- takes the first valid color found
+      where
+      validColors = [ x | x <- colors, notElem x invalidColors] -- finds the legal colors for the node
+        where
+        invalidColors = [ y | x <- neighbors, y <- colors, (x,y) `elem` solution] -- finds the colors of the neighbors, if there are any
+          where
+          neighbors = [ if x == node then y else x | (x,y) <- pairs, (x == node) || (y == node)]  -- finds a list of nodes that are neighbors to the node in question
 
 {-
 Example list of edges
@@ -169,8 +210,9 @@ Use your encryptChar function from homework 1
 encryptChar :: Code -> Char -> Char
 -- Fill in your code from homework 1 here
 encryptChar code ch
-  = ch
-
+  | code == [] = ch
+  | fst (head code) == ch = snd (head code)
+  | otherwise = encryptChar (tail code) ch
 {-
 A cycle is defined as a list of characters c1,c2,...,cn
   such that every character in the sequence is followed by its encryption
@@ -188,7 +230,8 @@ encryptCycle code1 ['a']
 encryptCycle :: Code -> [Char] -> [Char]
 -- Fill in your code here
 encryptCycle code cyc
-  = cyc
+  | (encryptChar code (head cyc)) `elem` cyc = cyc
+  | otherwise = encryptCycle code (encryptChar code (head cyc) : cyc)
 
 
 {-
@@ -223,7 +266,7 @@ The meaning of each instruction is as follows:
     go to line number n, note that v is ignored so anything is allowed
   4. blz v n
     if the value of v is <= 0 then go line n
-      otherwise proceed to the next line in the program
+      otherwise proceed to the next line in the program 
   5. ret v n
     quit the program and return the value v, here n is ignored
 -}
@@ -254,9 +297,26 @@ Note 2: I don't care what you do if there are errors, such as:
 
 -}
 exec :: Program -> Program -> Memory -> Int  
--- Fill in your code here
 exec prog_whole prog_partial mem
-  = 0
+  | tfst cur == "jmp" = exec prog_whole (drop (thrd cur) prog_whole) mem
+  | tfst cur == "load" = exec prog_whole (tail prog_partial) (((tsnd cur),(thrd cur)):mem)
+  | tfst cur == "add" = exec prog_whole (tail prog_partial) (((tsnd cur),((thrd cur)+(find (tsnd cur) mem))):mem)
+  | tfst cur == "blz" = blz prog_whole prog_partial mem (tsnd cur) (thrd cur)
+  | tfst cur == "ret" = find (tsnd cur) mem
+  | otherwise = (-1)
+  where
+    cur = head prog_partial
+    tfst (x,y,z) = x
+    tsnd (x,y,z) = y
+    thrd (x,y,z) = z
+    find v m
+      | (fst(head m)) == v = snd (head m)
+      | otherwise = find v (tail m)
+    blz prog_whole prog_partial mem v n
+      | (find v mem) <= 0 = exec prog_whole (drop n prog_whole) mem
+      | otherwise = exec prog_whole (tail prog_partial) mem
+
+
 
 
 {-
@@ -277,4 +337,7 @@ prog1 :: Program
 prog1 = [("load","x",4),("load","y",5),("load","z",0),
          ("blz","y",7),("add","z",1),("add","y",(-1)),("jmp","",3),
          ("blz","x",11),("add","z",1),("add","x",(-1)),("jmp","",7),("ret","z",0)] 
+
+tylerProg :: Program
+tylerProg = [("load","x",4),("load","y",(-1)),("add","x",5),("add","y",1),("blz","y",2),("ret","x",0)]
 
