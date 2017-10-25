@@ -256,7 +256,7 @@ type Memf = String -> Int
 
 exec' :: [Inst] -> [Inst] -> Memf -> Int  
 --exec prog cur mem | trace ("exec " ++ show  (head cur) ++ "  " ++ show mem) False = undefined
-exec prog cur mem
+--exec prog cur mem
 -- TODO
 exec' _ _ _ = 0
 

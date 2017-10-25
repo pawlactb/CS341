@@ -37,7 +37,7 @@ addb [] [] 1 = [1]
 addb [] y c = addb [0] y c
 addb x [] c = addb x [0] c
 addb (x:xs) (y:ys) c = (sum : (addb xs ys new_c))
-    where (sum, new_c) = ( ((x+y+c) `mod` 10), (quot (x+y) 10) )
+    where (sum, new_c) = ( ((x+y+c) `mod` 10), (quot (x+y+c) 10) )
 
  
 
