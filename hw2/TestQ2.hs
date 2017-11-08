@@ -1,6 +1,5 @@
 --Due Date: 2017-09-28 23:59:59.999999
---Worked with Patrick Delaney and Anthony Dowling --
--- Author: Tyler Pawlaczyk --
+
 module TestQ2 (Number,addNum,subSum,Color,Node,Edge,Coloring,graphColor,Code,test_cycle,Inst,Variable,Statement,Program,Memory,test_exec) where
 
 import Debug.Trace
@@ -32,15 +31,21 @@ addb [5,7] [9,8] 0
 
 -}
 addb :: Number -> Number -> Digit -> Number
-addb [] [] 0 = [0]
-addb [] [] 1 = [1]
-addb [] y c = addb [0] y c
-addb x [] c = addb x [0] c
-addb (x:xs) (y:ys) c = (sum : (addb xs ys new_c))
-    where (sum, new_c) = ( ((x+y+c) `mod` 10), (quot (x+y+c) 10) )
-
- 
-
+-- Fill in your code here
+addb [] [] 0 = []
+addb [] [] c = [c]
+addb (x:xs) [] c 
+  | sum < 10   = (sum) : xs
+  | otherwise  = (sum - 10) : (addb xs [] 1)
+    where sum = x + c
+addb [] (y:ys) c
+  | sum < 10   = (sum) : ys
+  | otherwise  = (sum - 10) : (addb [] ys 1)
+    where sum = y + c
+addb (x:xs) (y:ys) c
+  | sum < 10   = (sum) : (addb xs ys 0)
+  | otherwise  = (sum - 10) : (addb xs ys 1)
+    where sum = x + y + c
 {-
 convertNumList takes a positive integer
 It returns a list of digits in reverse, representing that number
@@ -51,25 +56,10 @@ convertNumList 75
 
 -}
 convertNumList :: Int -> Number
-convertNumList n
-    | n < 0 = []
-    | otherwise = reverse (toString (show n))
-    where
-        toString str
-            | str == [] = []
-            | otherwise = charToInt (head str) : toString (tail str)
-            where
-                charToInt c
-                    | c == '9' = 9
-                    | c == '8' = 8
-                    | c == '7' = 7
-                    | c == '6' = 6
-                    | c == '5' = 5
-                    | c == '4' = 4
-                    | c == '3' = 3
-                    | c == '2' = 2
-                    | c == '1' = 1
-                    | c == '0' = 0
+-- Fill in your code here
+convertNumList 0 = []
+convertNumList n = n `mod` 10 : convertNumList ( n `div` 10 )
+
 
 {-
 addNum takes two integers
@@ -88,7 +78,10 @@ addNum m n = addb (convertNumList m) (convertNumList n) 0
 prop_add is a test to check addf using quickCheck
 -} 
 prop_add :: Int -> Int -> Bool 
-prop_add m n = (addNum m n == addNum n m)
+-- I recommend that you fill in code here
+prop_add m n
+  | addNum m n == convertNumList (m + n)   = True
+  | otherwise                              = False
 
 
 {-
@@ -110,26 +103,23 @@ subSum [2,3,5,7] 11
 -}
 
 subSum :: [Int] -> Int -> [[Int]]
--- Fill in your code here
-subSum xs n
-  | xs == [] = [[]]
-  | otherwise =  [ x | x <- permutationsOf xs , sum x == n]
-  where 
-    permutationsOf (x:xs) = permutationsOf xs ++ [x:subArray | subArray <- (permutationsOf xs)]
-    permutationsOf [] = [[]]
+subSum xs n = [ zs | zs <- powerSet xs, sumSet zs == n ]
+
+sumSet :: [Int] -> Int
+sumSet [] = 0
+sumSet (x:xs) = x + sumSet xs
+  
+powerSet [] = [[]]
+powerSet (x:xs) = previous ++ [x:sub | sub <- previous]
+  where previous = powerSet xs
 
 {-
 Property to partially check subSum using quickCheck
 -}
 prop_subsum :: [Int] -> Int -> Bool
--- I recommend you fill in your code here
 prop_subsum xs n
-  | xs == [] = True
-  | (sum xs) < n = True
-  | subs == [] = True
-  | otherwise = sum (head (subs)) == n
-  where
-    subs = subSum xs n
+  = True
+  
 
 {-
 Types used in graph coloring
@@ -147,7 +137,7 @@ graphColor takes the following arguments
   1. A list of colors
   2. A list of nodes
   3. A list of edges (i.e., pairs of nodes)
-  4. A partial coloring (i.e., a list of pairs of node and oolor)
+  4. A partial coloring (i.e., a list of pairs of node and color)
 graphColor returns all complete colorings of the graph
 If there is more than one solution, your list does not
   need to contain all of them, as long as it contains at least one
@@ -160,27 +150,35 @@ take 1 (graphColor "abc" [1..4] e2 [])
 
 -}
 graphColor :: [Color] -> [Node] -> [Edge] -> Coloring -> [Coloring]
--- Fill in your code here
+graphColor [] nodes pairs solution = []
+graphColor colors [] pairs solution = []
 graphColor colors nodes pairs solution
-  = [ r | r <- [ [(y,z) | (y,z) <- x, z /= '\b' ] | x <- rawList ], length r == length nodes ]  -- sorts out invalid solutions
-  where 
-  rawList
-    | length nodes == length solution = [solution]  -- operation done, return the solution
-    | otherwise = concat [graphColor colors nodes pairs ((newColored, (colorify newColored colors pairs solution)):solution) |
-                          newColored <- nodes,
-                          notElem newColored (fst (unzip solution))
-                          ]
-    where
-    colorify node colors pairs solution
-      | solution == [] = head colors  -- makes the first node get colored faster
-      | validColors == [] = '\b'      -- no valid color could be found
-      | otherwise = head validColors  -- takes the first valid color found
-      where
-      validColors = [ x | x <- colors, notElem x invalidColors] -- finds the legal colors for the node
-        where
-        invalidColors = [ y | x <- neighbors, y <- colors, (x,y) `elem` solution] -- finds the colors of the neighbors, if there are any
-          where
-          neighbors = [ if x == node then y else x | (x,y) <- pairs, (x == node) || (y == node)]  -- finds a list of nodes that are neighbors to the node in question
+  | length solution == length nodes    = [solution]
+  | otherwise                          = concat [graphColor colors nodes pairs (newColoring:solution) | newColoring <- allColorings, isValid newColoring pairs solution ]
+    where allColorings = colorCombinations colors nodes
+
+colorCombinations :: [Color] -> [Node] -> Coloring
+colorCombinations colors nodes  = [ (node,color) | node <- nodes, color <- colors ]
+
+otherNode :: Node -> Edge -> Node
+otherNode node (n1,n2)
+  | node == n1     = n2
+  | otherwise      = n1
+
+getNodes :: Node -> [Edge] -> [Node]
+getNodes node pairs = [ otherNode node (n1,n2) | (n1,n2) <- pairs, n1 == node || n2 == node ]
+
+invalidColors :: Node -> [Edge] -> Coloring -> [Color]
+invalidColors node pairs coloring = [ color | (nodes,color) <- coloring, nodes `elem` ( getNodes node pairs ) ]
+
+isColored :: Node -> Coloring -> Bool
+isColored node [] = False
+isColored node ((n,c):otherColoring)
+  | node == n        = True
+  | otherwise        = isColored node otherColoring
+  
+isValid :: (Node,Color) -> [Edge] -> Coloring -> Bool
+isValid (node,color) pairs coloring = not ( isColored node coloring ) && not ( color `elem` invalidColors node pairs coloring )
 
 {-
 Example list of edges
@@ -205,15 +203,19 @@ range1 = ['q'..'z'] ++ ['a'..'p']
 code1 :: Code
 code1 = zip domain1 range1
 
-{-
-Use your encryptChar function from homework 1
--}
-encryptChar :: Code -> Char -> Char
--- Fill in your code from homework 1 here
+-- pairFirst takes a Code and Char
+-- returns the list of all Pairs with that Char as first element
+pairFirst :: Code -> Char -> Code
+pairFirst code ch 
+  = [ (a,b) | (a,b) <- code, a == ch ]
+
+
+encryptChar :: Code -> Char -> Char 
 encryptChar code ch
-  | code == [] = ch
-  | fst (head code) == ch = snd (head code)
-  | otherwise = encryptChar (tail code) ch
+  | pairFirst code ch == []  = ch
+  | otherwise                = head [b | (a,b) <- code, a == ch]
+  
+  
 {-
 A cycle is defined as a list of characters c1,c2,...,cn
   such that every character in the sequence is followed by its encryption
@@ -229,10 +231,10 @@ encryptCycle code1 ['a']
 
 -}
 encryptCycle :: Code -> [Char] -> [Char]
--- Fill in your code here
 encryptCycle code cyc
-  | (encryptChar code (head cyc)) `elem` cyc = cyc
-  | otherwise = encryptCycle code (encryptChar code (head cyc) : cyc)
+  | newChar `elem` cyc   = cyc
+  | otherwise            = encryptCycle code (newChar:cyc)
+    where newChar = encryptChar code (head cyc)
 
 
 {-
@@ -267,7 +269,7 @@ The meaning of each instruction is as follows:
     go to line number n, note that v is ignored so anything is allowed
   4. blz v n
     if the value of v is <= 0 then go line n
-      otherwise proceed to the next line in the program 
+      otherwise proceed to the next line in the program
   5. ret v n
     quit the program and return the value v, here n is ignored
 -}
@@ -297,27 +299,46 @@ Note 2: I don't care what you do if there are errors, such as:
 9
 
 -}
+
+getVariableValue :: Variable -> Memory -> Int
+getVariableValue variable memory = head [ val | (var,val) <- memory, var == variable ]
+
+load :: Variable -> Int -> Memory -> Memory
+load variable value memory
+  = (variable, value):newMemory
+    where newMemory = [ (var, val) | (var, val) <- memory, var /= variable ]
+	
+add :: Variable -> Int -> Memory -> Memory
+add variable value memory
+  = load variable (value + varValue) memory
+    where varValue = getVariableValue variable memory
+	
+jmp :: Program -> Int -> Program
+jmp prog_whole line
+  = take (lastInst - (line+1)) (drop line prog_whole)
+    where lastInst = length prog_whole + 1
+	
+blz :: Program -> Program -> Variable -> Memory -> Int -> Program
+blz prog_whole prog_partial variable memory line
+  | value <= 0        = jmp prog_whole line
+  | otherwise         = prog_partial
+    where value = getVariableValue variable memory
+	
+	
+
 exec :: Program -> Program -> Memory -> Int  
-exec prog_whole prog_partial mem
-  | tfst cur == "jmp" = exec prog_whole (drop (thrd cur) prog_whole) mem
-  | tfst cur == "load" = exec prog_whole (tail prog_partial) (((tsnd cur),(thrd cur)):mem)
-  | tfst cur == "add" = exec prog_whole (tail prog_partial) (((tsnd cur),((thrd cur)+(find (tsnd cur) mem))):mem)
-  | tfst cur == "blz" = blz prog_whole prog_partial mem (tsnd cur) (thrd cur)
-  | tfst cur == "ret" = find (tsnd cur) mem
-  | otherwise = (-1)
-  where
-    cur = head prog_partial
-    tfst (x,y,z) = x
-    tsnd (x,y,z) = y
-    thrd (x,y,z) = z
-    find v m
-      | (fst(head m)) == v = snd (head m)
-      | otherwise = find v (tail m)
-    blz prog_whole prog_partial mem v n
-      | (find v mem) <= 0 = exec prog_whole (drop n prog_whole) mem
-      | otherwise = exec prog_whole (tail prog_partial) mem
-
-
+-- Fill in your code here
+exec prog_whole ((inst, var, val):prog_partial) mem
+  | inst == "load"         = exec prog_whole prog_partial memAfterLoad
+  | inst == "add"          = exec prog_whole prog_partial memAfterAdd
+  | inst == "jmp"          = exec prog_whole progAfterJmp mem
+  | inst == "blz"          = exec prog_whole progAfterBlz mem
+  | inst == "ret"          = getVariableValue var mem
+  | otherwise              = error "Instruction not recognized"
+    where { memAfterLoad = load var val mem ;
+	        memAfterAdd = add var val mem ;
+			progAfterJmp = jmp prog_whole val ;
+			progAfterBlz = blz prog_whole prog_partial var mem val }
 
 
 {-
@@ -338,7 +359,4 @@ prog1 :: Program
 prog1 = [("load","x",4),("load","y",5),("load","z",0),
          ("blz","y",7),("add","z",1),("add","y",(-1)),("jmp","",3),
          ("blz","x",11),("add","z",1),("add","x",(-1)),("jmp","",7),("ret","z",0)] 
-
-tylerProg :: Program
-tylerProg = [("load","x",4),("load","y",(-1)),("add","x",5),("add","y",1),("blz","y",2),("ret","x",0)]
 
