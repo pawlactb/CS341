@@ -1,4 +1,3 @@
-
 --Due Date: 2017-10-19 23:59:59.999999
 
 module TestQ3 (search,geogDone,geogNext,graphDone,graphNext,consistent,conflict,lookup',modify,encryptf,encryptString,exec',test_exec') where
@@ -24,19 +23,14 @@ search returns a list of all full solutions reachable from
   the partial solution
     - full solutions will be in forward order
 -}
-search :: (Eq a, Eq b) =>
+search :: (Show a, Show b) =>
   (a -> [b] -> Bool) -> (a -> [b] -> [b]) -> a -> [b] -> [[b]]
 --search _ _ _ p | trace ("search  " ++ show p) False = undefined
-search done next global partial
-  | done global partial == True = [solution]
-  | nextPartial == []           = []
-  | otherwise                   = search done next global newPartial
-    where nextPartial = next global partial
-          newPartial = nextPartial ++ partial
-          solution = reverseList newPartial  
+search isDone nextMoves global partial
+	| isDone global partial           = [reverse partial]
+	| otherwise                       = concat $ map (search isDone nextMoves global) nextStates
+	      where nextStates = [nextState:partial | nextState <- nextMoves global partial]
 
-reverseList :: [a] -> [a]
-reverseList = foldl (flip (:)) []
 {-
 The following are used to test search for the maze problem
 This is already written, there is nothing for you to do here
@@ -96,11 +90,19 @@ Write some functions to test search for the geography problem
 -}
 
 geogDone :: [String] -> [String] -> Bool
-geogDone global partial = length global == length partial
+geogDone global partial
+  = (length global) == (length partial)
 
 geogNext :: [String] -> [String] -> [String]
-geogNext global (recent:rest)
-  = [ word | word <- global, head word == last recent, word /= recent, word `notElem` rest ]
+geogNext [] partial = partial
+geogNext global [] = global
+geogNext global partial@(w:_)
+  = [x | x <- global, notElem x partial, isValid x w]
+
+-- Defining isValid
+isValid :: String -> String -> Bool
+isValid x w
+  = (head x) == (last w)
 
 {-
 Test cases for the geography problem
@@ -144,19 +146,58 @@ type Coloring = [(Int,Char)]
 
 {-
 Global graph coloring informtion consists of:
-  1. List of colors 
+  1. List of colors
   2. Largest node in graph, assume nodes are [1..largest]
   3. List of edges
 -}
 type GraphGlobal = ([Color],Int,[Edge])
 
 graphDone :: GraphGlobal -> Coloring -> Bool
--- TODO
-graphDone _ _ = True
+graphDone (_,numNodes,_) partial = length partial == numNodes
 
 graphNext :: GraphGlobal -> Coloring -> [(Node,Color)]
--- TODO
-graphNext _ _ = []
+graphNext (colors, numNodes, edges) partial 
+  | nextNode == 0              = [] 
+  | otherwise                  = [(nextNode, color) | color <- colors,
+                                     consistent nextNode edges partial color]
+	        where nextNode = getNextNode partial numNodes
+
+
+-- Grabs the next available node (goes up by one each time)
+getNextNode :: Coloring -> Int -> Int
+getNextNode [] numNodes
+  | numNodes < 1     = 0
+  | otherwise         = 1
+
+getNextNode ((node,_):rest) numNodes
+  | nextNode > numNodes   = 0
+  | otherwise             = nextNode
+        where nextNode = node+1
+  
+  
+  
+--checks if node was already colored
+alreadyColored :: Node -> Coloring -> Bool
+alreadyColored node [] = False
+alreadyColored node ((n,c):restColoring)
+  | node == n         = True
+  | otherwise         = alreadyColored node restColoring
+
+
+
+-- Grabs the node that's opposite the given node in a pair
+-- ASSUMPTION: The pair contains the given node
+extractEdgeNode :: Edge -> Node -> Node
+extractEdgeNode (n1, n2) node
+    | n1 /= node        = n1
+    | otherwise         = n2
+
+-- Grabs all edges that have our node as either the first or second element
+getEdgeNodes :: Node -> [Edge] -> [Node]
+getEdgeNodes node pairs
+    = [extractEdgeNode (n1, n2) node | (n1, n2) <- pairs, n1 == node || n2 == node]
+
+
 
 {-
 consistent takes
@@ -167,8 +208,12 @@ consistent takes
 True if node n can be colored with c, given the current coloring
 -}
 consistent :: Node -> [Edge] -> Coloring -> Color -> Bool 
--- TODO
-consistent _ _ _ _ = True
+consistent node edges partial color
+  = not (alreadyColored node partial) && not (conflictEdges edgeNodes)
+         where { edgeNodes = getEdgeNodes node edges ;
+		         conflictEdges = foldl (\acc n -> (isConflict n) || acc) False ;
+				 isConflict = conflict edges partial color node
+               }
 
 {-
 conflict takes
@@ -180,8 +225,22 @@ conflict takes
 True if coloring n1 with c would cause a conflict with n2
 -}
 conflict :: [Edge] -> Coloring -> Color -> Node -> Node -> Bool
--- TODO
-conflict _ _ _ _ _ = True
+conflict edges partial color n1 n2
+  = (n2 `elem` edgeNodes) && (invalidColor color partial n2)
+      where edgeNodes = getEdgeNodes n1 edges
+
+
+-- Checks if color is invalid by looking if n1 has already claimed it
+invalidColor :: Color -> Coloring -> Node -> Bool
+invalidColor color partial n1
+  | inList partial n1      = color == (lookup' partial n1)
+  | otherwise              = False
+
+
+-- Checks if element is in list
+inList :: (Show a, Eq a) => [(a,b)] -> a -> Bool
+inList list y
+  = foldl (\acc (a,b) -> acc || (a == y)) False list
 
 
 {-
@@ -190,7 +249,9 @@ If x does not appear a s first element of xs then return an error message
 Otherwise return the second element of the first time y appears
 -}
 lookup' :: (Show a, Eq a)  => [(a,b)] -> a -> b
-lookup' x _ = (snd . head) x 
+lookup' ((a,b):rest) y
+  | y == a             = b
+  | otherwise          = lookup' rest y
 
 {-
 Test cases for the graph coloring problem
@@ -218,8 +279,7 @@ modify takes
 it returns a function that is identical to f except it maps x to y
 -}
 modify :: Eq a => a -> b -> (a -> b) -> (a -> b)
--- Your code goes here
-modify _ _ f = f
+modify x y f = (\z -> if z == x then y else f z)
 
 {-
 encryptf takes
@@ -230,8 +290,16 @@ it returns a function that
   and maps everything else to itself
 -}
 encryptf :: Eq a => [a] -> [a] -> (a -> a)
--- Your code goes here
-encryptf _ _ = \x -> x
+encryptf xs ys = (\x -> mapIt xs ys x)
+
+
+-- mapIt maps a character to it's corresponding thing and stuff
+mapIt :: Eq a => [a] -> [a] -> a -> a
+mapIt [] _ z = z
+mapIt (x:xs) [] z = z
+mapIt (x:xs) (y:ys) z
+  | z == x     = y
+  | otherwise  = mapIt xs ys z
 
 {-
 encryptString is a way of testing the above function 
@@ -241,8 +309,9 @@ encryptString (encryptf "abc" "xyz") "dcba"
 
 -}
 encryptString :: (a -> a) -> [a] -> [a]
--- Your code goes here
-encryptString _ _ = []
+encryptString f [] = []
+encryptString f (x:xs) = (f x):(encryptRest)
+  where encryptRest = encryptString f xs
 
 {-
 exec' is the same as exec in the previous assignment
@@ -254,19 +323,58 @@ There is only one difference
 type Inst = (String,String,Int)  
 type Memf = String -> Int
 
+-- Adds variable to memory function
+load :: String -> Int -> Memf -> Memf
+load var val memf
+  = modify var val memf
+
+
+-- Changes variable in memory function
+add :: String -> Int -> Memf -> Memf
+add var val memf
+  = modify var newVal memf
+      where newVal = val + (memf var)
+
+-- Returns a prog_partial starting at the specified line number
+jump :: [Inst] -> Int -> [Inst]
+jump prog_whole lineNum
+   = take (lastIns - (lineNum+1)) (drop lineNum prog_whole)
+         where lastIns = length prog_whole + 1
+
+
+-- Jumps to lineNum if value of variable is <= 0
+blz :: [Inst] -> [Inst] -> String -> Memf -> Int -> [Inst]
+blz prog_whole prog_partial variable memf lineNum
+  | value <= 0        = jump prog_whole lineNum
+  | otherwise         = prog_partial
+       where value = memf variable
+
+
+-- Main execution function
 exec' :: [Inst] -> [Inst] -> Memf -> Int  
---exec prog cur mem | trace ("exec " ++ show  (head cur) ++ "  " ++ show mem) False = undefined
---exec prog cur mem
--- TODO
-exec' _ _ _ = 0
+--exec prog cur mem | trace ("exec " ++ show  (head cur) ++ "  " ++ show mem) False = undefined 
+-- New memory function is returned using add and load functions
+exec' prog_whole ((inst, var, val):prog_partial) memf
+  | inst == "load"        = exec' prog_whole prog_partial memfAfterLoad
+  | inst == "add"         = exec' prog_whole prog_partial memfAfterAdd
+  | inst == "jmp"         = exec' prog_whole progAfterJmp memf
+  | inst == "blz"         = exec' prog_whole progAfterBlz memf
+  | inst == "ret"         = memf var
+  | otherwise             = error "Instruction not recognized in program"
+       where { memfAfterLoad = load var val memf ;
+               memfAfterAdd = add var val memf ;
+               progAfterJmp = jump prog_whole val ;
+               progAfterBlz = blz prog_whole prog_partial var memf val }
+
 
 {-
 test_exec' calls exec' as in the previous assignment
 The only difference is that all variables are should be set to zero
 -}
 test_exec' :: [Inst] -> Int
--- TODO
-test_exec' _ = 0
+test_exec' program
+  = exec' program program initialMemf
+       where initialMemf = (\x -> 0)
 
 {-
 Test case for test_exec'
@@ -279,7 +387,6 @@ test_exec' prog1
 -}
 
 prog1 :: [Inst]
-prog1 = [("load","x",4),("load","y",5),("load","z",0),
+prog1 = [("load","x",5),("load","y",5),("load","z",-5),
          ("blz","y",7),("add","z",1),("add","y",(-1)),("jmp","",3),
          ("blz","x",11),("add","z",1),("add","x",(-1)),("jmp","",7),("ret","z",0)]
-
